@@ -1,10 +1,24 @@
-# Azure Static Website Module
+# Azure Linux VM Module
 
-This repository is a single Terraform module. Version 1 (`1.0.0`) creates an Azure resource group and a StorageV2 account, enables static website hosting, and uploads `index.html` to the `$web` container.
+This repository contains one Terraform Registry module. Version `2.0.0` is a major, breaking change from `1.x`: instead of Azure Storage static website hosting, it creates an Ubuntu Linux VM and serves `index.html` using Nginx.
 
-## Deploy version 1
+The module also creates a virtual network, subnet, network security group, static public IP, and network interface. HTTP (port 80) is open to the internet so the website can be viewed. SSH (port 22) is restricted to the configured source CIDR and uses an SSH public key; password authentication is disabled.
 
-Prerequisites: Terraform 1.5 or later, Azure CLI, and an Azure subscription with permission to create resource groups and storage accounts.
+## Requirements
+
+- Terraform 1.5 or later
+- Azure CLI and an Azure subscription with permission to create networking and compute resources
+- An SSH key pair
+
+Create a key pair on Windows if needed:
+
+```powershell
+ssh-keygen -t ed25519 -f "$env:USERPROFILE\.ssh\app-v2"
+```
+
+Use the `.pub` public key file in Terraform configuration. Never provide or upload the private key.
+
+## Deploy locally
 
 ```powershell
 az login
@@ -12,27 +26,36 @@ az account set --subscription "<subscription-id>"
 terraform init
 terraform fmt -check
 terraform validate
-terraform plan -var="storage_account_name=<globally-unique-name>"
-terraform apply -var="storage_account_name=<globally-unique-name>"
 ```
 
-The storage account name must be 3-24 lowercase letters or numbers and globally unique across Azure. Override the defaults as needed:
+Provide the public key and your public IP in a `terraform.tfvars` file:
+
+```hcl
+ssh_public_key  = "ssh-ed25519 AAAA... your-key-comment"
+ssh_source_cidr = "203.0.113.10/32"
+```
+
+Replace the example CIDR with your actual public IP in `/32` notation. Then review and apply:
 
 ```powershell
-terraform apply `
-  -var="storage_account_name=<globally-unique-name>" `
-  -var="resource_group_name=rg-my-static-site" `
-  -var="location=westus2"
+terraform plan
+terraform apply
 ```
 
-Terraform prints the website URL as `static_website_url`. When finished experimenting, run `terraform destroy` to remove the resources.
+Terraform outputs `website_url`, `vm_public_ip`, and `ssh_command`. The website is available over HTTP after the VM finishes its first-boot Nginx setup. Destroy the resources when finished experimenting:
 
-## Semantic versioning learning roadmap
+```powershell
+terraform destroy
+```
 
-Use `MAJOR.MINOR.PATCH`:
+## Release and upgrade
 
-- **Major**: incompatible changes to the module interface or behavior. Planned `2.0.0`: replace the static website deployment with virtual machines.
-- **Minor**: backward-compatible functionality. Planned `2.1.0`: add a database and tracking of access counts (the measurement/telemetry design still needs to be selected).
-- **Patch**: backward-compatible fixes or changes that do not alter the module contract. Planned `2.1.1`: increase disk space, once the VM/database design exists.
+Publish this module as `v2.0.0` in the Terraform Registry. Update any calling configuration to version `2.0.0` and provide `ssh_public_key` and `ssh_source_cidr`.
 
-For Terraform Registry releases, publish a Git tag such as `v1.0.0`. Keep the module files at the repository root; the registry expects one module in this repository.
+This major upgrade removes the v1 Storage website resources and creates VM/network resources. Review the Terraform plan carefully before applying: it will destroy the old static website resources in the same state. Keep and use the `1.x` registry release if you need to continue managing the v1 deployment.
+
+Semantic versioning roadmap:
+
+- `2.0.0`: breaking move from Storage static website to Ubuntu VM + Nginx.
+- `2.1.0`: planned backward-compatible database and access-counting capability; monitoring design needs to be selected.
+- `2.1.1`: planned patch release to increase the OS disk default from 30 GB.
