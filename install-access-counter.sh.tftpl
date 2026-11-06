@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+cloud-init status --wait
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install --yes nginx python3-venv
+
+install -d -m 0755 /opt/site-counter
+printf '%s' '${app_py_base64}' | base64 --decode > /opt/site-counter/app.py
+printf '%s' '${index_base64}' | base64 --decode > /var/www/html/index.html
+python3 -m venv /opt/site-counter/venv
+/opt/site-counter/venv/bin/pip install --disable-pip-version-check Flask gunicorn azure-data-tables azure-identity
+
+cat > /etc/systemd/system/site-counter.service <<'SERVICE'
+[Unit]
+Description=Website access counter API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/site-counter
+Environment="TABLE_ACCOUNT=${storage_account}"
+Environment="TABLE_NAME=${table_name}"
+ExecStart=/opt/site-counter/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5000 app:app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+cat > /etc/nginx/sites-available/default <<'NGINX'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    root /var/www/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+NGINX
+
+nginx -t
+systemctl daemon-reload
+systemctl enable --now site-counter
+systemctl enable nginx
+systemctl reload nginx

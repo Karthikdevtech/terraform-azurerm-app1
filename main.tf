@@ -55,6 +55,29 @@ resource "azurerm_subnet_network_security_group_association" "app" {
   network_security_group_id = azurerm_network_security_group.app.id
 }
 
+locals {
+  access_storage_account_name = "app${substr(sha256("${var.resource_group_name}-${var.vm_name}"), 0, 21)}"
+}
+
+resource "azurerm_storage_account" "access" {
+  name                     = local.access_storage_account_name
+  resource_group_name      = azurerm_resource_group.app.name
+  location                 = azurerm_resource_group.app.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind             = "StorageV2"
+
+  min_tls_version                 = "TLS1_2"
+  allow_nested_items_to_be_public = false
+
+  tags = var.tags
+}
+
+resource "azurerm_storage_table" "access" {
+  name                 = "siteaccess"
+  storage_account_name = azurerm_storage_account.access.name
+}
+
 resource "azurerm_public_ip" "app" {
   name                = "${var.vm_name}-public-ip"
   location            = azurerm_resource_group.app.location
@@ -118,5 +141,39 @@ resource "azurerm_linux_virtual_machine" "app" {
     version   = "latest"
   }
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   tags = var.tags
+}
+
+resource "azurerm_role_assignment" "access" {
+  scope                = azurerm_storage_account.access.id
+  role_definition_name = "Storage Table Data Contributor"
+  principal_id         = azurerm_linux_virtual_machine.app.identity[0].principal_id
+  principal_type       = "ServicePrincipal"
+}
+
+resource "azurerm_virtual_machine_extension" "access_counter" {
+  name                       = "install-access-counter"
+  virtual_machine_id         = azurerm_linux_virtual_machine.app.id
+  publisher                  = "Microsoft.Azure.Extensions"
+  type                       = "CustomScript"
+  type_handler_version       = "2.1"
+  auto_upgrade_minor_version = true
+
+  settings = jsonencode({
+    script = base64encode(templatefile("${path.module}/install-access-counter.sh.tftpl", {
+      app_py_base64   = base64encode(file("${path.module}/app.py"))
+      index_base64    = base64encode(file("${path.module}/index.html"))
+      storage_account = azurerm_storage_account.access.name
+      table_name      = azurerm_storage_table.access.name
+    }))
+  })
+
+  depends_on = [
+    azurerm_role_assignment.access,
+    azurerm_storage_table.access,
+  ]
 }

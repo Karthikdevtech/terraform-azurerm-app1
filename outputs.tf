@@ -17,3 +17,8 @@ output "resource_group_name" {
   description = "Name of the resource group created by this module."
   value       = azurerm_resource_group.app.name
 }
+
+output "access_count_table_name" {
+  description = "Azure Table Storage table that stores the total page-load count."
+  value       = azurerm_storage_table.access.name
+}
