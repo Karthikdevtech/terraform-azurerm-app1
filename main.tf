@@ -78,6 +78,13 @@ resource "azurerm_storage_table" "access" {
   storage_account_name = azurerm_storage_account.access.name
 }
 
+resource "azurerm_user_assigned_identity" "access" {
+  name                = "${var.vm_name}-access"
+  resource_group_name = azurerm_resource_group.app.name
+  location            = azurerm_resource_group.app.location
+  tags                = var.tags
+}
+
 resource "azurerm_public_ip" "app" {
   name                = "${var.vm_name}-public-ip"
   location            = azurerm_resource_group.app.location
@@ -142,7 +149,8 @@ resource "azurerm_linux_virtual_machine" "app" {
   }
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.access.id]
   }
 
   tags = var.tags
@@ -151,7 +159,7 @@ resource "azurerm_linux_virtual_machine" "app" {
 resource "azurerm_role_assignment" "access" {
   scope                = azurerm_storage_account.access.id
   role_definition_name = "Storage Table Data Contributor"
-  principal_id         = azurerm_linux_virtual_machine.app.identity[0].principal_id
+  principal_id         = azurerm_user_assigned_identity.access.principal_id
   principal_type       = "ServicePrincipal"
 }
 

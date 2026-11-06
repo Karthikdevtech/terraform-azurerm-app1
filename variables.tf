@@ -46,7 +46,7 @@ variable "ssh_source_cidr" {
 variable "os_disk_size_gb" {
   description = "Managed OS disk size in GB."
   type        = number
-  default     = 30
+  default     = 64
 
   validation {
     condition     = var.os_disk_size_gb >= 30
@@ -59,6 +59,6 @@ variable "tags" {
   type        = map(string)
   default = {
     managed_by = "terraform"
-    version    = "2.1.1"
+    version    = "2.1.2"
   }
 }

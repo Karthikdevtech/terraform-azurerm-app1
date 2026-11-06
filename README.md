@@ -5,6 +5,7 @@ This repository contains one Terraform Registry module.
 - `2.0.0` replaced the v1 Storage static website with an Ubuntu VM running Nginx.
 - `2.1.0` adds a page-load counter backed by Azure Table Storage. This is a backward-compatible addition: existing VM inputs and website/SSH outputs remain available.
 - `2.1.1` keeps the original VM bootstrap content unchanged so installing the counter does not force VM replacement.
+- `2.1.2` uses a user-assigned managed identity for the table permission and increases the default OS disk size to 64 GB.
 
 The module creates a virtual network, subnet, network security group, static public IP, network interface, VM, Storage account, and a table. HTTP (port 80) is open to serve the site; SSH (port 22) is restricted to the configured source CIDR and uses an SSH public key. The VM's system-assigned managed identity is granted `Storage Table Data Contributor`; no storage key is placed on the VM.
 
@@ -58,11 +59,12 @@ terraform destroy
 
 ## Release and upgrade
 
-Publish this module as `v2.1.1` in the Terraform Registry, then update the calling configuration to version `2.1.1`. The original `index.html` remains the VM's creation-time bootstrap page; the VM extension installs the counter-enabled `index-v2.1.html` without changing the VM's `custom_data`. Review the Terraform plan before applying and confirm that the VM is not replaced.
+Publish this module as `v2.1.2` in the Terraform Registry, then update the calling configuration to version `2.1.2`. The original `index.html` remains the VM's creation-time bootstrap page; the VM extension installs the counter-enabled `index-v2.1.html` without changing the VM's `custom_data`. A user-assigned managed identity provides the table permission. Review the Terraform plan before applying and confirm that the VM is not replaced.
 
 Semantic-versioning roadmap:
 
 - `2.0.0`: breaking move from Storage static website to Ubuntu VM + Nginx.
 - `2.1.0`: add the Azure Table Storage page-load counter.
 - `2.1.1`: preserve the existing VM during the page-counter upgrade.
-- `2.1.2`: planned patch release to increase the OS disk default from 30 GB.
+- `2.1.2`: use a user-assigned managed identity and increase the OS disk default to 64 GB.
+- `2.1.3`: next planned compatible patch release.
