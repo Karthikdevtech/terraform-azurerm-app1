@@ -19,7 +19,7 @@ variable "vm_name" {
 variable "vm_size" {
   description = "Azure VM size."
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_F1als_v7"
 }
 
 variable "admin_username" {
