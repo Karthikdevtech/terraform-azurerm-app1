@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Terraform VM Website</title>
+  </head>
+  <body>
+    <main>
+      <h1>It works!</h1>
+      <p>This website is served by Nginx on an Ubuntu virtual machine deployed with Terraform.</p>
+      <p>Total page loads: <strong id="access-count">Loading...</strong></p>
+      <p id="access-count-status" role="status" aria-live="polite"></p>
+    </main>
+    <script>
+      fetch("/api/access", { method: "POST" })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("The access count could not be loaded.");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          document.getElementById("access-count").textContent = data.count;
+        })
+        .catch(() => {
+          document.getElementById("access-count").textContent = "Unavailable";
+          document.getElementById("access-count-status").textContent =
+            "The page loaded, but the access counter is temporarily unavailable.";
+        });
+    </script>
+  </body>
+</html>

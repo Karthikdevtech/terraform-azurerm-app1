@@ -166,7 +166,7 @@ resource "azurerm_virtual_machine_extension" "access_counter" {
   settings = jsonencode({
     script = base64encode(templatefile("${path.module}/install-access-counter.sh.tftpl", {
       app_py_base64   = base64encode(file("${path.module}/app.py"))
-      index_base64    = base64encode(file("${path.module}/index.html"))
+      index_base64    = base64encode(file("${path.module}/index-v2.1.html"))
       storage_account = azurerm_storage_account.access.name
       table_name      = azurerm_storage_table.access.name
     }))
