@@ -25,7 +25,6 @@ resource "azurerm_storage_account_static_website" "static_site" {
 
 resource "azurerm_storage_blob" "index" {
   name                 = "index.html"
-  storage_account_name = azurerm_storage_account.static_site.name
   storage_container_id = "${azurerm_storage_account.static_site.id}/blobServices/default/containers/$web"
   type                 = "Block"
   source               = "${path.module}/index.html"
