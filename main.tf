@@ -85,6 +85,16 @@ resource "azurerm_user_assigned_identity" "access" {
   tags                = var.tags
 }
 
+resource "azurerm_managed_disk" "data" {
+  name                 = "${var.vm_name}-data"
+  location             = azurerm_resource_group.app.location
+  resource_group_name  = azurerm_resource_group.app.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = var.data_disk_size_gb
+  tags                 = var.tags
+}
+
 resource "azurerm_public_ip" "app" {
   name                = "${var.vm_name}-public-ip"
   location            = azurerm_resource_group.app.location
@@ -163,6 +173,13 @@ resource "azurerm_role_assignment" "access" {
   principal_type       = "ServicePrincipal"
 }
 
+resource "azurerm_virtual_machine_data_disk_attachment" "data" {
+  managed_disk_id    = azurerm_managed_disk.data.id
+  virtual_machine_id = azurerm_linux_virtual_machine.app.id
+  lun                = 0
+  caching            = "ReadWrite"
+}
+
 resource "azurerm_virtual_machine_extension" "access_counter" {
   name                       = "install-access-counter"
   virtual_machine_id         = azurerm_linux_virtual_machine.app.id
@@ -183,5 +200,6 @@ resource "azurerm_virtual_machine_extension" "access_counter" {
   depends_on = [
     azurerm_role_assignment.access,
     azurerm_storage_table.access,
+    azurerm_virtual_machine_data_disk_attachment.data,
   ]
 }

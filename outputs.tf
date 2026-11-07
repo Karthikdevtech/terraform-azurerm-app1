@@ -22,3 +22,13 @@ output "access_count_table_name" {
   description = "Azure Table Storage table that stores the total page-load count."
   value       = azurerm_storage_table.access.name
 }
+
+output "data_disk_name" {
+  description = "Name of the separately managed data disk attached to the VM."
+  value       = azurerm_managed_disk.data.name
+}
+
+output "data_disk_mount_path" {
+  description = "Linux mount path for the attached data disk."
+  value       = "/mnt/app-data"
+}

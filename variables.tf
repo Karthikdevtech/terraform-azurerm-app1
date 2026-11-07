@@ -54,11 +54,22 @@ variable "os_disk_size_gb" {
   }
 }
 
+variable "data_disk_size_gb" {
+  description = "Size in GB of the separately managed data disk."
+  type        = number
+  default     = 32
+
+  validation {
+    condition     = var.data_disk_size_gb >= 4
+    error_message = "The data disk must be at least 4 GB."
+  }
+}
+
 variable "tags" {
   description = "Tags applied to Azure resources."
   type        = map(string)
   default = {
     managed_by = "terraform"
-    version    = "2.1.2"
+    version    = "2.1.3"
   }
 }
